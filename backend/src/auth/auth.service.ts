@@ -34,6 +34,12 @@ const providers: Record<AuthProviderName, AuthProvider> = {
  * across instances. A production deployment would back this with a
  * shared store (e.g. Redis) keyed by token id and TTL'd to the token's
  * expiry. Entries are pruned lazily on lookup/insert.
+ *
+ * SECURITY WARNING: because this store is per-process, a token revoked
+ * (via logout) on one instance remains valid on any other instance in a
+ * horizontally scaled/multi-process deployment. Do not rely on this for
+ * security-critical revocation guarantees in production — replace with a
+ * shared store before scaling beyond a single instance.
  */
 const revokedTokens = new Map<string, number>();
 

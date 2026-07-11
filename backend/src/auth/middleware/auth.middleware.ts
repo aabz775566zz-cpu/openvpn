@@ -22,7 +22,12 @@ function extractBearerToken(req: Request): string | null {
     return null;
   }
 
-  const [scheme, token] = header.split(' ');
+  const parts = header.split(' ');
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const [scheme, token] = parts;
   if (scheme !== 'Bearer' || !token) {
     return null;
   }
