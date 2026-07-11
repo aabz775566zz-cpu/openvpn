@@ -51,11 +51,12 @@ export interface LoginRequestBody {
  *
  * `iat`/`exp` are standard JWT claims (issued-at / expiry, in seconds
  * since the epoch); they are populated automatically by `jsonwebtoken`
- * but also documented here since `sub`/`provider` are custom claims this
- * codebase relies on.
+ * and surfaced here as `issuedAt`/`expiry`. `userId` is a custom claim
+ * that plays the role of the standard `sub` (subject) claim, and
+ * `provider` is a custom claim this codebase relies on.
  */
 export interface SessionTokenPayload {
-  /** Subject: the authenticated user's id. */
+  /** The authenticated user's id (equivalent to the JWT `sub` claim). */
   userId: string;
   provider: AuthProviderName;
   /** Issued-at, seconds since epoch. */

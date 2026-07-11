@@ -57,7 +57,7 @@ export class AuthService {
   static getProvider(providerName: AuthProviderName): AuthProvider {
     const provider = providers[providerName];
     if (!provider) {
-      throw new AppError(`Unsupported authentication provider: ${providerName}`, 400, 'UNSUPPORTED_PROVIDER');
+      throw new AppError(`Unsupported authentication provider: ${providerName}`, 400, 'INVALID_PROVIDER');
     }
     return provider;
   }

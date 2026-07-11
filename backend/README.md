@@ -187,6 +187,9 @@ npm test
 - **Middleware** (`auth/middleware/auth.middleware.ts`): `requireAuth`
   validates the bearer token and populates `req.auth`; used to protect
   `/auth/logout` and `/auth/me`.
+- **Rate limiting**: all `/auth/*` routes are rate-limited per client IP
+  (`express-rate-limit`) to mitigate brute-force/credential-stuffing
+  attempts against login.
 - **Routes** (`auth.routes.ts`), mounted at `${API_PREFIX}/auth`:
 
   | Method | Path      | Auth required | Description                        |
