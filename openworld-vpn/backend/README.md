@@ -27,15 +27,22 @@ backend/
 
 ## Status
 
-This is a placeholder scaffold. No real business logic or VPN functionality has been
-implemented yet.
+The `api` module now exposes a minimal `GET /health` endpoint backed by Express. All
+other modules (auth, subscription, server-management, database) are still
+placeholders — no real business logic or VPN functionality has been implemented yet.
 
-## Getting Started (future work)
+## Getting Started
 
-1. Install [Node.js](https://nodejs.org/) (LTS) or the runtime chosen for this service.
+1. Install [Node.js](https://nodejs.org/) (LTS).
 2. Run `npm install` to install dependencies.
 3. Copy `.env.example` to `.env` and configure local values.
-4. Run `npm run dev` to start the local development server.
+4. Run `npm start` (or `npm run dev`) to start the local development server.
+5. Verify it's running: `curl http://localhost:3000/health`.
+
+## Testing
+
+Run `npm test` to execute the Jest test suite (currently covers the health-check
+endpoint).
 
 ## Environment Variables
 

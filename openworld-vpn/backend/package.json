@@ -3,9 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "description": "OpenWorld VPN backend service (API, auth, subscription, server management, database).",
+  "main": "src/api/server.js",
   "scripts": {
-    "dev": "echo \"TODO: implement dev server\" && exit 0",
+    "start": "node src/api/server.js",
+    "dev": "node src/api/server.js",
     "build": "echo \"TODO: implement build\" && exit 0",
-    "test": "echo \"TODO: implement tests\" && exit 0"
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
   }
 }
