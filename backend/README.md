@@ -7,11 +7,12 @@ accounts, subscriptions, and the VPN server directory. It never handles
 user VPN traffic directly — that is the responsibility of the WireGuard
 infrastructure in `../infrastructure/vpn-server/`.
 
-> **Phase 2 scope**: This phase adds the database foundation (Prisma
-> schema, database service layer, repository pattern) described in
-> [`../docs/DATABASE_DESIGN.md`](../docs/DATABASE_DESIGN.md). It does
-> **not** connect to a real database, implement authentication providers,
-> or implement VPN connection logic — see
+> **Phase 3 scope**: This phase adds the JWT-based authentication
+> foundation (`src/auth/`) — a provider abstraction with mocked Google,
+> Apple, and WeChat providers, login/logout/me routes, and JWT
+> validation middleware. **No real OAuth keys are configured, no external
+> identity provider APIs are called**, and payments/VPN connection logic
+> remain unimplemented — see
 > [`../docs/DEVELOPMENT_ROADMAP.md`](../docs/DEVELOPMENT_ROADMAP.md) for
 > what comes next.
 
@@ -64,6 +65,8 @@ Copy `.env.example` to `.env` and adjust as needed:
 | `API_PREFIX`     | `/api/v1`                    | Base path for the versioned REST API.          |
 | `LOG_LEVEL`      | `info`                       | Minimum log level (`debug`, `info`, `warn`, `error`). |
 | `DATABASE_URL`   | placeholder (see `.env.example`) | PostgreSQL connection string used by Prisma. **Not connected to a real database yet** — no code path calls `DatabaseService.connect()`. |
+| `JWT_SECRET`     | dev-only fallback (see `src/config/env.ts`) | Secret used to sign/verify session tokens. **Set a real, strong secret in every non-local environment.** |
+| `JWT_EXPIRES_IN_SECONDS` | `3600`                | Session token lifetime, in seconds.            |
 
 All environment variables are read and validated in a single place:
 `src/config/env.ts`. The rest of the codebase should import `config` from
@@ -84,6 +87,7 @@ backend/
 │   ├── routes/              # Route definitions
 │   │   ├── health.routes.ts # GET /health
 │   │   └── v1/               # Versioned API router mounted at API_PREFIX (/api/v1)
+│   ├── auth/                # JWT authentication: service, controller, routes, providers, middleware
 │   ├── controllers/         # Request handlers
 │   ├── services/            # Business logic (empty — populated in later phases)
 │   ├── database/            # Prisma client singleton + DatabaseService (connect/disconnect/health)
@@ -123,8 +127,8 @@ stable path for load balancers, orchestrators, and uptime monitors.
 ### Versioned API
 
 All feature endpoints are mounted under the `API_PREFIX` (`/api/v1` by
-default) via `src/routes/v1/index.ts`. No feature routes are implemented
-yet in Phase 1.
+default) via `src/routes/v1/index.ts`. See [Authentication](#authentication-phase-3)
+below for the endpoints implemented so far.
 
 ### Error Responses
 
@@ -166,14 +170,47 @@ npm test
   no migrations have been generated/applied, and no code path opens a
   real database connection.
 
+## Authentication (Phase 3)
+
+`src/auth/` implements a JWT-based session authentication foundation:
+
+- **Provider abstraction** (`auth.types.ts`): every identity provider
+  implements `verifyIdentity(credential)` and `getUserProfile(providerUserId)`.
+- **Providers** (`auth/providers/`): `GoogleProvider`, `AppleProvider`,
+  `WeChatProvider` — all return **mocked** responses. No real OAuth keys
+  are configured and no external API is ever called; credentials are
+  validated by prefix (e.g. `mock-google-token-<id>`) only.
+- **Service** (`auth.service.ts`): orchestrates login (provider
+  verification → JWT issuance), token verification, and logout (in-memory
+  token revocation).
+- **JWT session payload**: `userId`, `provider`, `issuedAt`, `expiry`.
+- **Middleware** (`auth/middleware/auth.middleware.ts`): `requireAuth`
+  validates the bearer token and populates `req.auth`; used to protect
+  `/auth/logout` and `/auth/me`.
+- **Routes** (`auth.routes.ts`), mounted at `${API_PREFIX}/auth`:
+
+  | Method | Path      | Auth required | Description                        |
+  |--------|-----------|----------------|--------------------------------------|
+  | POST   | `/login`  | No             | Verify a provider credential, issue a JWT. |
+  | POST   | `/logout` | Yes            | Revoke the presented session token.  |
+  | GET    | `/me`     | Yes            | Return the authenticated user's identity. |
+
+- **Tests** (`tests/auth.test.ts`, `tests/auth.providers.test.ts`): cover
+  the valid login → `/me` → logout flow, invalid/expired/forged/missing
+  token handling, and provider abstraction consistency.
+
 ## Future Modules
 
 The following are intentionally **not** implemented yet and are planned for
 subsequent development phases (see
 [`../docs/DEVELOPMENT_ROADMAP.md`](../docs/DEVELOPMENT_ROADMAP.md)):
 
-- **Authentication** — user registration, login, sessions/tokens, and
-  concrete auth providers (email, OAuth) referenced by `User.authProvider`.
+- **Real identity providers** — actual Google/Apple/WeChat OAuth
+  integration (real credentials, external API calls) replacing the mocked
+  providers above.
+- **User persistence on login** — wiring `AuthService.login` to
+  `UserRepository` to create/look up a real `User` record instead of
+  using the provider's raw id.
 - **Provisioned database** — an actual PostgreSQL instance, applied
   migrations, and services/controllers wired to the repositories above.
 - **Subscriptions & billing** — plan management and payment integration.

@@ -17,6 +17,10 @@ export interface AppConfig {
   serviceName: string;
   apiPrefix: string;
   logLevel: string;
+  jwt: {
+    secret: string;
+    expiresInSeconds: number;
+  };
 }
 
 const nodeEnv = (process.env.NODE_ENV as NodeEnv) || 'development';
@@ -27,6 +31,12 @@ export const config: AppConfig = {
   serviceName: process.env.SERVICE_NAME || 'OpenWorld VPN Backend',
   apiPrefix: process.env.API_PREFIX || '/api/v1',
   logLevel: process.env.LOG_LEVEL || 'info',
+  jwt: {
+    // Development-only fallback so local/test environments work without
+    // extra setup. Production deployments must set a real JWT_SECRET.
+    secret: process.env.JWT_SECRET || 'dev-only-insecure-secret-do-not-use-in-production',
+    expiresInSeconds: Number(process.env.JWT_EXPIRES_IN_SECONDS) || 3600,
+  },
 };
 
 export default config;
