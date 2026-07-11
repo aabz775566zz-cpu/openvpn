@@ -25,6 +25,27 @@ export interface AppConfig {
 
 const nodeEnv = (process.env.NODE_ENV as NodeEnv) || 'development';
 
+const DEV_ONLY_JWT_SECRET = 'dev-only-insecure-secret-do-not-use-in-production';
+
+function resolveJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+
+  if (secret) {
+    return secret;
+  }
+
+  if (nodeEnv === 'production') {
+    throw new Error('JWT_SECRET must be set in production. Refusing to start with an insecure default.');
+  }
+
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[WARN] JWT_SECRET is not set — falling back to an insecure development-only secret. ' +
+      'Set JWT_SECRET in your .env file before deploying to any shared or production environment.',
+  );
+  return DEV_ONLY_JWT_SECRET;
+}
+
 export const config: AppConfig = {
   env: nodeEnv,
   port: Number(process.env.PORT) || 3000,
@@ -32,9 +53,7 @@ export const config: AppConfig = {
   apiPrefix: process.env.API_PREFIX || '/api/v1',
   logLevel: process.env.LOG_LEVEL || 'info',
   jwt: {
-    // Development-only fallback so local/test environments work without
-    // extra setup. Production deployments must set a real JWT_SECRET.
-    secret: process.env.JWT_SECRET || 'dev-only-insecure-secret-do-not-use-in-production',
+    secret: resolveJwtSecret(),
     expiresInSeconds: Number(process.env.JWT_EXPIRES_IN_SECONDS) || 3600,
   },
 };
