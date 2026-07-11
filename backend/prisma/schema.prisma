@@ -1,0 +1,135 @@
+// OpenWorld VPN — Prisma schema (Phase 2: database foundation)
+//
+// This schema defines the initial relational data model described in
+// docs/DATABASE_DESIGN.md. It targets PostgreSQL, but is NOT connected to
+// any real database in this phase — DATABASE_URL is a placeholder only
+// (see backend/.env.example) and no migrations have been applied.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Authentication provider used to create/verify a user's identity.
+/// Providers themselves are not implemented yet (Phase 2 scope is schema
+/// only); this enum simply records which mechanism was used.
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  APPLE
+}
+
+/// Client platform a device is running on.
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WINDOWS
+  MACOS
+  LINUX
+}
+
+/// Commercial plan tier for a subscription.
+enum SubscriptionPlan {
+  FREE
+  MONTHLY
+  YEARLY
+}
+
+/// Lifecycle status of a subscription.
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+/// Operational status of a VPN server node.
+enum ServerStatus {
+  ACTIVE
+  DEGRADED
+  OFFLINE
+  MAINTENANCE
+}
+
+/// End-user account.
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  username      String       @unique
+  authProvider  AuthProvider @default(EMAIL)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  devices       Device[]
+  subscriptions Subscription[]
+  connections   Connection[]
+
+  @@map("users")
+}
+
+/// A device that has installed the client application, owned by a User.
+model Device {
+  id         String         @id @default(uuid())
+  userId     String
+  deviceName String
+  platform   DevicePlatform
+  createdAt  DateTime       @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connections Connection[]
+
+  @@index([userId])
+  @@map("devices")
+}
+
+/// A user's commercial subscription plan and its lifecycle.
+model Subscription {
+  id        String             @id @default(uuid())
+  userId    String
+  plan      SubscriptionPlan
+  status    SubscriptionStatus @default(TRIAL)
+  startDate DateTime           @default(now())
+  endDate   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+/// A node in the VPN infrastructure fleet, tracked for directory and
+/// load-balancing purposes only. No user traffic is ever handled here.
+model VPNServer {
+  id       String       @id @default(uuid())
+  country  String
+  city     String
+  status   ServerStatus @default(ACTIVE)
+  capacity Int          @default(0)
+
+  connections Connection[]
+
+  @@map("vpn_servers")
+}
+
+/// Minimal connection log entry for diagnostics and abuse prevention.
+/// No browsing activity or traffic content is ever logged.
+model Connection {
+  id             String    @id @default(uuid())
+  userId         String
+  serverId       String
+  deviceId       String?
+  connectedAt    DateTime  @default(now())
+  disconnectedAt DateTime?
+
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server VPNServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  device Device?   @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([serverId])
+  @@map("connections")
+}
